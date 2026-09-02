@@ -8,81 +8,52 @@ load_dotenv()
 # ==========================================
 # DUAL MODEL CONFIGURATION
 # ==========================================
-
-# 20B Model: Lightweight tasks (Reader & Critic) to conserve rate limits
 llm_20b = ChatGroq(
     model="openai/gpt-oss-20b",
     temperature=0.2,
     max_tokens=1000
-).with_retry(
-    stop_after_attempt=5,
-    wait_exponential_jitter=True
-)
+).with_retry(stop_after_attempt=5, wait_exponential_jitter=True)
 
-# 120B Model: Reserved for key cognitive steps (Search Planning & Writer Synthesis)
 llm_120b = ChatGroq(
     model="openai/gpt-oss-120b",
     temperature=0.2,
     max_tokens=2000
-).with_retry(
-    stop_after_attempt=5,
-    wait_exponential_jitter=True
-)
+).with_retry(stop_after_attempt=5, wait_exponential_jitter=True)
+
 
 # ==========================================
-# SEARCH AGENT (Now upgraded to 120B)
+# SEARCH AGENT
 # ==========================================
 def build_search_agent(topic: str):
     prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are a Search Agent in a Multi-Agent System.
-
-Your job is to transform user inputs into precise, comprehensive search queries.
-
-Rules:
-- If the user provides a simple or vague topic (e.g. "spiderman"), expand it to cover recent developments, release history, commercial performance, and key milestones.
-- Return ONLY the expanded search query string."""
-        ),
+        ("system", "You are a Search Agent. Create an effective search query. Return ONLY the raw query."),
         ("human", "Research Topic:\n{topic}")
     ])
-
     chain = prompt | llm_120b | StrOutputParser()
     return chain.invoke({"topic": topic})
 
+
 # ==========================================
-# READER AGENT (Kept on 20B)
+# READER AGENT
 # ==========================================
 def build_reader_agent(search_results: str):
     prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are a Reader Agent in a Multi-Agent System.
-Analyze the search results and pick up to 3 of the most reliable and relevant URLs.
-Return ONLY up to 3 URLs, one URL per line without explanations or numbers."""
-        ),
+        ("system", "You are a Reader Agent. Analyze results and pick top 3 URLs. One per line."),
         ("human", "Search Results:\n{search_results}")
     ])
-
     chain = prompt | llm_20b | StrOutputParser()
     return chain.invoke({"search_results": search_results})
 
+
 # ==========================================
-# WRITER AGENT (Kept on 120B)
+# WRITER AGENT (Must be exported as writer_chain)
 # ==========================================
 writer_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
-        """You are an expert Research Writer Agent. 
-
-Create detailed, well-structured research reports using clean, standard Markdown.
-
-Formatting Rules:
-1. Always use standard Markdown headers (# Header 1, ## Header 2).
-2. Format key metrics using clean Markdown tables.
-3. Use bullet points for itemized facts.
-4. Ensure spaces between words, dates, and numbers. Never output escaped characters like '\\n' or squished text.
-5. In the Sources section, list valid URLs from the research material as standard hyperlinked text."""
+        """You are an expert Research Writer Agent.
+Output ONLY valid Markdown (# for title, ## for sections).
+Base facts strictly on provided research context. Never invent data or fake URL markers."""
     ),
     (
         "human",
@@ -94,26 +65,27 @@ Research Material:
 Internal Feedback (if any):
 {feedback}
 
-Generate the report using this structure:
-
+Generate the final report:
 # Research Report: {topic}
-
 ## Introduction
-## Key Findings (Use a Markdown Table and Bullet Points)
+## Key Findings
 ## Analysis
 ## Conclusion
 ## Sources"""
     )
 ])
 
+# EXPORT THIS EXACT NAME
+writer_chain = writer_prompt | llm_120b | StrOutputParser()
+
+
 # ==========================================
-# CRITIC AGENT (Kept on 20B)
+# CRITIC AGENT (Must be exported as critic_chain)
 # ==========================================
 critic_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
-        """You are an internal Quality Guard Agent.
-Review the research draft against raw research text.
+        """You are an internal Quality Guard.
 If completely valid, reply ONLY with: APPROVED
 If invalid, reply: REJECTED: <short bullet points of issues>"""
     ),
@@ -122,4 +94,5 @@ If invalid, reply: REJECTED: <short bullet points of issues>"""
     )
 ])
 
+# EXPORT THIS EXACT NAME
 critic_chain = critic_prompt | llm_20b | StrOutputParser()
