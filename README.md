@@ -1,177 +1,92 @@
 # 🔬 Multi-Agent AI Research System
 
-An autonomous, production-ready multi-agent research platform built using **Streamlit**, **LangChain**, and **Groq LPUs**. The application orchestrates specialized AI agents to expand user intent, retrieve primary web sources, select authoritative links, extract live page content, and generate publication-grade Markdown research reports backed by an internal quality-guard validation loop.
+An autonomous research platform built with **Streamlit**, **LangChain**, and **Groq**. It coordinates multiple AI agents to search the web, filter reliable sources, scrape content, and generate a structured research report.
 
-## 🚀 Live Demo
-
-👉 **[Try the Multi-Agent AI Research System](https://multiagent-deep-research.streamlit.app/)**
+🚀 **Live Demo:** [multiagent-deep-research.streamlit.app](https://multiagent-deep-research.streamlit.app/)
 
 ## Features
 
-- 🧠 **Query Intent Expansion** – Transforms vague search terms (e.g. "spiderman") into precise, high-yield research queries
-- 🌐 **Live Web Search** – Uses the Tavily Search API to retrieve up-to-date, relevant results
-- 🔗 **Authoritative Source Selection** – Filters results to prioritize official, research, and top-tier news sources
-- 📚 **Automated Web Scraping** – Extracts clean text content from selected URLs using BeautifulSoup
-- 🛡 **Self-Correcting Verification** – An internal Critic Agent cross-checks the draft report against raw research to catch hallucinations, fabricated dates, and structural gaps
-- 🔄 **Bounded Revision Loop** – The Writer–Critic feedback loop is capped at 2 revisions to guarantee predictable runtime and avoid rate-limit exhaustion
-- 🖥 **Clean UX** – Internal revision cycles are hidden from the UI; only high-level progress and the final report are shown
-- 📝 **Structured Markdown Output** – Reports always follow Introduction → Key Findings → Analysis → Conclusion → Sources
+- Expands vague topics into precise search queries
+- Searches the web via the Tavily API
+- Filters results down to the top 3 authoritative sources
+- Scrapes and cleans page content with BeautifulSoup
+- Internal Critic Agent checks the draft for hallucinated facts/dates before finalizing (max 2 revisions)
+- Outputs a clean Markdown report: Introduction → Key Findings → Analysis → Conclusion → Sources
 
-## System Architecture & Workflow
+## How It Works
 
-The platform uses a **Dual-Model Strategy** to balance high-reasoning output quality against Groq's free-tier rate limits (8,000 Tokens Per Minute).
+1. **Search Agent** (`openai/gpt-oss-120b`) — turns the topic into an optimized search query
+2. **Tavily API** — returns web search results
+3. **Reader Agent** (`openai/gpt-oss-20b`) — picks the top 3 most reliable URLs
+4. **Scraper** (BeautifulSoup) — extracts clean text from each source
+5. **Writer Agent** (`openai/gpt-oss-120b`) — synthesizes everything into a Markdown report
+6. **Critic Agent** (`openai/gpt-oss-20b`) — checks the draft against the raw research; if rejected, sends it back to the Writer (max 2 loops)
 
-```
- ┌────────────────────────┐
- │     User Topic Input    │
- └───────────┬────────────┘
-             │
-             ▼
-┌───────────────────────────────────────────────────────────┐
-│  🔎 Search Planning Agent (openai/gpt-oss-120b)             │
-│  • Expands raw input into a precise, high-yield search      │
-│    query                                                     │
-└───────────────────────────────┬─────────────────────────────┘
-                                 │
-                                 ▼
-┌───────────────────────────────────────────────────────────┐
-│  🌐 Tavily Web Search API                                    │
-│  • Fetches primary search results and page context          │
-└───────────────────────────────┬─────────────────────────────┘
-                                 │
-                                 ▼
-┌───────────────────────────────────────────────────────────┐
-│  📖 Reader / Filter Agent (openai/gpt-oss-20b)               │
-│  • Evaluates results for authority and relevance             │
-│  • Selects the top 3 trusted URLs                            │
-└───────────────────────────────┬─────────────────────────────┘
-                                 │
-                                 ▼
-┌───────────────────────────────────────────────────────────┐
-│  📚 Scraper (BeautifulSoup)                                  │
-│  • Extracts clean text content from selected sources         │
-└───────────────────────────────┬─────────────────────────────┘
-                                 │
-                                 ▼
-┌───────────────────────────────────────────────────────────┐
-│  ✍️ Writer Agent (openai/gpt-oss-120b)                       │
-│  • Synthesizes scraped content into a structured Markdown    │
-│    report                                                     │
-└───────────────────────────────┬─────────────────────────────┘
-                                 │  ◄────────────────┐
-                                 ▼                    │ Rejected
-┌────────────────────────────────────────────────────┴────────┐
-│  🧐 Critic / Quality Guard Agent (openai/gpt-oss-20b)         │
-│  • Verifies facts, dates, and figures against raw research    │
-│  • Confirms required section headers are present              │
-│  • Max 2 revision loops                                        │
-└───────────────────────────────┬───────────────────────────────┘
-                                 │ Approved / Max Loop Reached
-                                 ▼
-                     ┌────────────────────────┐
-                     │   Final Markdown Report │
-                     └────────────────────────┘
-```
+## Why Two Models?
 
-## Dual-Model Workload Allocation
-
-| Agent | Model | Role & Justification |
+| Agent | Model | Why |
 |---|---|---|
-| **Search Agent** | `openai/gpt-oss-120b` | Query planning — expands ambiguous prompts into high-yield search terms |
-| **Reader Agent** | `openai/gpt-oss-20b` | URL filtering — fast, low-latency selection of the top 3 trusted sources |
-| **Writer Agent** | `openai/gpt-oss-120b` | Report synthesis — full reasoning power for structured, accurate reports |
-| **Critic Agent** | `openai/gpt-oss-20b` | Fact verification — checks the draft without draining high-tier token quota |
+| Search | `gpt-oss-120b` | Better at turning vague prompts into strong queries |
+| Reader | `gpt-oss-20b` | Simple filtering task, saves token budget |
+| Writer | `gpt-oss-120b` | Needs full reasoning power for report quality |
+| Critic | `gpt-oss-20b` | Lightweight validation, doesn't need heavy reasoning |
 
-## API & System Resilience
+This split keeps report quality high while staying under Groq's free-tier rate limit (8,000 tokens/minute).
 
-**Rate-Limit Protection (Exponential Backoff + Jitter)**
+## Reliability
 
-To handle Groq's `429 Too Many Requests` errors on the free tier, every model call is wrapped with LangChain's retry handler (built on `tenacity`):
-
-```python
-llm = ChatGroq(...).with_retry(
-    stop_after_attempt=5,
-    wait_exponential_jitter=True
-)
-```
-
-- **Exponential backoff** progressively doubles the wait time between retries (e.g. 2s → 4s → 8s), giving the rate-limit window time to reset.
-- **Jitter** adds random variance to each wait interval, preventing multiple agent calls from retrying in lockstep and re-triggering the limit ("thundering herd" effect).
-
-**Bounded Revision Loop**
-
-The Writer–Critic feedback loop enforces a hard cap of `max_revisions = 2`. If the Critic hasn't approved the draft after two revisions, the pipeline finalizes the latest version automatically — preventing infinite loops and runaway token usage.
+- **Retry with backoff:** every LLM call uses `.with_retry(stop_after_attempt=5, wait_exponential_jitter=True)` so temporary `429` rate-limit errors don't crash the app — it waits (2s → 4s → 8s, with random jitter) and retries automatically.
+- **Revision cap:** the Writer–Critic loop stops after 2 revisions max, so it can never hang or burn through the rate limit indefinitely.
 
 ## Tech Stack
 
-- **Frontend:** Streamlit
-- **Orchestration:** LangChain (Core & Community)
-- **Inference:** Groq LPU Acceleration — `openai/gpt-oss-120b` & `openai/gpt-oss-20b`
-- **Web Search:** Tavily Search API
-- **Scraping & Parsing:** BeautifulSoup4, Requests
-- **Config & Validation:** python-dotenv, pydantic
+Streamlit · LangChain · Groq (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`) · Tavily Search API · BeautifulSoup4 · python-dotenv
 
 ## Project Structure
 
 ```
-├── app.py              # Streamlit UI and page logic
-├── pipeline.py          # Multi-agent orchestration loop
-├── agent.py              # Agent prompts, LLM setup, and retry logic
-├── tools.py               # Tavily search + BeautifulSoup scraping utilities
-├── requirements.txt        # Production dependencies
-├── runtime.txt               # Python version pin (3.12)
-├── .gitignore                  # Excludes .env, __pycache__, .vscode
-└── README.md                     # Project documentation
+├── app.py            # Streamlit UI
+├── pipeline.py        # Orchestrates the agent pipeline
+├── agent.py            # Agent prompts + LLM setup
+├── tools.py             # Tavily search + scraping tools
+├── requirements.txt      # Dependencies
+├── runtime.txt             # Python version (3.12)
+└── .gitignore                # Excludes .env, __pycache__
 ```
 
-## Local Setup
+## Run Locally
 
-**1. Clone the repository**
 ```bash
 git clone https://github.com/Danish4416/Multi_Agent_System.git
 cd Multi_Agent_System
-```
-
-**2. Create a virtual environment**
-```bash
 python -m venv venv
-source venv/bin/activate      # On Windows: venv\Scripts\activate
-```
-
-**3. Install dependencies**
-```bash
+source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**4. Configure environment variables**
-
-Create a `.env` file in the project root:
+Create a `.env` file:
 ```
 GROQ_API_KEY=your_groq_api_key_here
 TAVILY_API_KEY=your_tavily_api_key_here
 ```
 
-**5. Run the app**
+Run it:
 ```bash
 streamlit run app.py
 ```
 
 ## Deployment
 
-Deployed on **Streamlit Community Cloud**:
+Deployed on **Streamlit Community Cloud**. To redeploy:
 
-1. Push the repository to GitHub (excluding `.env`).
-2. Go to [share.streamlit.io](https://share.streamlit.io) and connect your GitHub account.
-3. Create a new app, selecting this repo, the `main` branch, and `app.py` as the entry point.
+1. Push to GitHub (never commit `.env`)
+2. Go to [share.streamlit.io](https://share.streamlit.io) → New app
+3. Select this repo, branch `main`, main file `app.py`
 4. Under **Advanced settings → Secrets**, add:
-   ```toml
+   ```
    GROQ_API_KEY = "your_groq_api_key_here"
    TAVILY_API_KEY = "your_tavily_api_key_here"
    ```
-5. Click **Deploy**.
+5. Deploy
 
-🌐 **Live App:** [https://multiagent-deep-research.streamlit.app/](https://multiagent-deep-research.streamlit.app/)
-
-## License
-
-This project is open source and available for personal and educational use.
+🌐 **Live App:** https://multiagent-deep-research.streamlit.app/
