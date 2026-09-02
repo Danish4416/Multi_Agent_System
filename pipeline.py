@@ -149,11 +149,11 @@ DETAILED SCRAPED SOURCES:
     # ==========================================
 
     max_revisions = 2
-    internal_feedback = "None"
+    internal_feedback = ""
 
     for attempt in range(max_revisions + 1):
         
-        update("✍️ Writing research report...")
+        update(f"✍️ Writing research report (Attempt {attempt + 1})...")
 
         report = writer_chain.invoke({
             "topic": topic,
@@ -168,13 +168,19 @@ DETAILED SCRAPED SOURCES:
             "research": research
         })
 
-        # Check if the Critic approved the report
-        if "APPROVED" in critique.upper() or attempt == max_revisions:
+        # Check if Critic approves OR if max revision threshold is reached
+        if "APPROVED" in critique.upper():
+            update("✅ Report verified by Critic!")
             state["report"] = report
             break
-        else:
-            update("🔄 Refining report details...")
+        elif attempt < max_revisions:
+            update(f"🔄 Refining report details based on feedback...")
             internal_feedback = critique
+        else:
+            # Fallback break to prevent infinite loops and rate limits
+            update("⚠️ Max revisions reached. Finalizing report...")
+            state["report"] = report
+            break
 
     # ==========================================
     # COMPLETE
