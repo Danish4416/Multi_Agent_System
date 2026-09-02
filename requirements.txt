@@ -1,0 +1,30 @@
+# LangChain
+langchain
+langchain-core
+langchain-community
+
+# LangGraph / Agents
+langgraph
+langgraph-prebuilt
+
+# Ollama + Qwen3
+langchain-ollama
+ollama
+langchain-mistralai
+langchain-groq
+
+
+# Tavily Web Search
+tavily-python
+langchain-tavily
+
+# Web Scraping
+beautifulsoup4
+requests
+
+# Environment Variables
+python-dotenv
+rich
+
+# Data Validation
+pydantic
