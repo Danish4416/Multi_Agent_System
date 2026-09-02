@@ -36,9 +36,13 @@ def build_search_agent(topic: str):
     prompt = ChatPromptTemplate.from_messages([
         (
             "system",
-            """You are a Search Agent in a Multi-Agent Research System.
-Create an effective, high-yield web search query for the user's research topic.
-Return ONLY the raw search query string without quotes or extra text."""
+            """You are a Search Agent in a Multi-Agent System.
+
+Your job is to transform user inputs into precise, comprehensive search queries.
+
+Rules:
+- If the user provides a simple or vague topic (e.g. "spiderman"), expand it to cover recent developments, release history, commercial performance, and key milestones.
+- Return ONLY the expanded search query string."""
         ),
         ("human", "Research Topic:\n{topic}")
     ])
@@ -69,13 +73,16 @@ Return ONLY up to 3 URLs, one URL per line without explanations or numbers."""
 writer_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
-        """You are an expert Research Writer Agent. Compile research materials into professional reports.
+        """You are an expert Research Writer Agent. 
 
-Rules:
-1. Output ONLY valid Markdown (# for title, ## for sections).
-2. Ensure clear spacing between all words and numbers.
-3. Base facts strictly on provided research context. Never invent data.
-4. Under Sources, list only real URLs provided in the research material."""
+Create detailed, well-structured research reports using clean, standard Markdown.
+
+Formatting Rules:
+1. Always use standard Markdown headers (# Header 1, ## Header 2).
+2. Format key metrics using clean Markdown tables.
+3. Use bullet points for itemized facts.
+4. Ensure spaces between words, dates, and numbers. Never output escaped characters like '\\n' or squished text.
+5. In the Sources section, list valid URLs from the research material as standard hyperlinked text."""
     ),
     (
         "human",
@@ -87,17 +94,17 @@ Research Material:
 Internal Feedback (if any):
 {feedback}
 
-Generate the final report using this structure:
+Generate the report using this structure:
+
 # Research Report: {topic}
+
 ## Introduction
-## Key Findings
+## Key Findings (Use a Markdown Table and Bullet Points)
 ## Analysis
 ## Conclusion
 ## Sources"""
     )
 ])
-
-writer_chain = writer_prompt | llm_120b | StrOutputParser()
 
 # ==========================================
 # CRITIC AGENT (Kept on 20B)
