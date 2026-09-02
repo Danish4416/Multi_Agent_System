@@ -64,10 +64,8 @@ def scrape_url(url: str) -> str:
         ]):
             tag.decompose()
 
-        text = soup.get_text(
-            separator=" ",
-            strip=True
-        )
+        text = soup.get_text(separator=" ", strip=True)
+        text = " ".join(text.split())
 
         return text[:4000]
 

@@ -125,54 +125,54 @@ Search Results:
 # ==========================================
 
 writer_prompt = ChatPromptTemplate.from_messages([
-
     (
         "system",
         """
-You are an expert Research Writer Agent.
+You are an expert Research Writer Agent. Your objective is to compile research materials into professional, highly accurate reports.
 
-Create accurate, detailed and professional
-research reports.
+Strict Formatting Rules:
+1. Output ONLY standard Markdown text (use # for main headers, ## for section headers).
+2. Never invent metadata tags, inline category keys (e.g., #FindingEvidence, [SOURCE 1]), or code wrappers.
+3. Ensure natural spacing between all words, dates, and numbers. Do not merge words together.
+4. Use standard markdown bolding (**text**) instead of special mathematical or double-asterisk symbols.
 
-Rules:
-
-1. Use ONLY the provided research.
-2. Never invent facts.
-3. Never invent dates or statistics.
-4. Clearly distinguish completed events,
-   ongoing activities and future plans.
-5. Do not make unsupported claims.
-6. Include only URLs actually provided.
+Content Rules:
+1. Base all facts, statistics, and dates strictly on the provided research context. Never invent data.
+2. Clearly distinguish completed events, ongoing trends, and prospective plans.
+3. In the Sources section, include ONLY URLs directly provided in the research material.
+4. If internal feedback is supplied, address each mentioned revision before finalizing the report.
 """
     ),
-
     (
         "human",
         """
 Research Topic:
-
 {topic}
 
-
 Research Material:
-
 {research}
 
+Internal Feedback / Revision Notes (if any):
+{feedback}
 
-Write a professional research report using:
+Generate the final research report strictly structured as follows:
 
-# Introduction
+# Research Report: {topic}
 
-# Key Findings
-Explain at least 3 important findings.
+## Introduction
+[Briefly state the context, purpose, and key focus of the research.]
 
-# Analysis
-Analyze implications and importance.
+## Key Findings
+[Provide a clear list of at least 3 distinct findings with concrete details.]
 
-# Conclusion
+## Analysis
+[Analyze the broader implications, technical/financial impact, and context.]
 
-# Sources
-List only actual URLs from the research.
+## Conclusion
+[Summarize overall outcomes and potential future outlook.]
+
+## Sources
+[List only the valid links from the research material as markdown hyperlinked text.]
 """
     )
 ])
