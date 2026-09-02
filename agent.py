@@ -186,7 +186,7 @@ writer_chain = (
 # ==========================================
 # CRITIC AGENT (Internal Quality Guard)
 # ==========================================
-critic_chain = ChatPromptTemplate.from_messages([
+critic_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
         """
@@ -216,4 +216,4 @@ Raw Research:
     )
 ])
 
-critic_chain = critic_chain | llm | StrOutputParser()
+critic_chain = critic_prompt | llm | StrOutputParser()
