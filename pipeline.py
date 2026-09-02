@@ -143,19 +143,37 @@ DETAILED SCRAPED SOURCES:
 """
 
 
+# ==========================================
+    # STEP 3 - WRITER & CRITIC LOOP (HIDDEN)
     # ==========================================
-    # STEP 3 - WRITER AGENT
-    # ==========================================
 
-    update("✍️ Writer Agent is analyzing and writing the report...")
+    max_revisions = 2
+    internal_feedback = "None"
 
-    state["report"] = writer_chain.invoke({
+    for attempt in range(max_revisions + 1):
+        
+        update("✍️ Writing research report...")
 
-        "topic": topic,
+        report = writer_chain.invoke({
+            "topic": topic,
+            "research": research,
+            "feedback": internal_feedback
+        })
 
-        "research": research
-    })
+        update("🧐 Verifying factual accuracy...")
 
+        critique = critic_chain.invoke({
+            "report": report,
+            "research": research
+        })
+
+        # Check if the Critic approved the report
+        if "APPROVED" in critique.upper() or attempt == max_revisions:
+            state["report"] = report
+            break
+        else:
+            update("🔄 Refining report details...")
+            internal_feedback = critique
 
     # ==========================================
     # COMPLETE
@@ -163,29 +181,5 @@ DETAILED SCRAPED SOURCES:
 
     update("✅ Research completed!")
 
-    return state
-
-
-# ==========================================
-# TEST
-# ==========================================
-
-if __name__ == "__main__":
-
-    topic = input(
-        "\nEnter a research topic: "
-    )
-
-    result = run_research_pipeline(topic)
-
-    print("\n" + "=" * 70)
-    print("FINAL REPORT")
-    print("=" * 70)
-
-    print(result["report"])
-
-    print("\n" + "=" * 70)
-    print("CRITIC FEEDBACK")
-    print("=" * 70)
-
-    print(result["feedback"])
+    # Return only the clean report to app.py
+    return {"report": state["report"]}

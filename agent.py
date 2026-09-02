@@ -182,3 +182,38 @@ writer_chain = (
     | llm
     | StrOutputParser()
 )
+
+# ==========================================
+# CRITIC AGENT (Internal Quality Guard)
+# ==========================================
+critic_chain = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        """
+You are an internal Quality Guard Agent.
+
+Review the research draft against the provided raw research material.
+
+Validation Checks:
+1. Ensure no facts, dates, or metrics are fabricated.
+2. Ensure structural headers (Introduction, Key Findings, Analysis, Conclusion, Sources) are present.
+3. Ensure assertions directly match the raw text.
+
+Output Rules:
+- If completely valid, reply ONLY with: APPROVED
+- If invalid, reply with: REJECTED: <concise list of fixes needed>
+"""
+    ),
+    (
+        "human",
+        """
+Draft Report:
+{report}
+
+Raw Research:
+{research}
+"""
+    )
+])
+
+critic_chain = critic_chain | llm | StrOutputParser()
