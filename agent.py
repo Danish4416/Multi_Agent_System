@@ -17,7 +17,7 @@ llm_20b = ChatGroq(
 llm_120b = ChatGroq(
     model="openai/gpt-oss-120b",
     temperature=0.2,
-    max_tokens=2000
+    max_tokens=3500
 ).with_retry(stop_after_attempt=5, wait_exponential_jitter=True)
 
 
